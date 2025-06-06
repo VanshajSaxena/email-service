@@ -3,42 +3,58 @@ import MockProviderB from "./MockProviderB.js";
 import EmailStatus from "./EmailStatus.js";
 import delay from "./utils/delay.js";
 
+// Email Service
 class EmailService {
   constructor(config = {}) {
+    // Providers (accepts mocks)
     this.providers = [new MockProviderA(), new MockProviderB()];
+    // Current provider index
     this.currentProviderIndex = 0;
 
+    // Max retries before failure
     this.maxRetries = config.maxRetries || 3;
+    // Initial backoff in milliseconds for exponential backoff
     this.initialBackoffMs = config.initialBackoffMs || 500;
 
+    // A set to store sent email IDs
     this.sentEmailIds = new Set();
 
+    // No. Of request before rate limiting
     this.rateLimitRequests = config.rateLimitRequests || 5;
+    // Rate limiting cooldown window in milliseconds
     this.rateLimitWindowMs = config.rateLimitWindowMs || 10000;
+    // Array to store timestamps of request to calculate rate limiting
     this.requestTimestamps = [];
 
+    // A map to store email statuses keyed with email.id
     this.emailStatuses = new Map();
 
-    // Queue
+    // Email queue
     this.emailQueue = [];
+    // A boolean to signal if queue is being processed
     this.isProcessingQueue = true;
 
-    // Circuit breaker
+    // Circuit breaker map
     this.circuitBreaker = {
+      // Provider 1 details
       [this.providers[0].name]: {
         failures: 0,
         lastFailureTime: null,
         isOpen: false,
       },
+      // Provider 2 details
       [this.providers[1].name]: {
         failures: 0,
         lastFailureTime: null,
         isOpen: false,
       },
+      // No. Of failures before breaking the circuit
       failureThreshold: config.circuitBreakerFailureThreshold || 3,
+      // TimeOut before resetting the circuit status (in milliseconds)
       resetTimeoutMs: config.circuitBreakerResetTimeoutMs || 30000,
     };
 
+    // Basic logger
     this.logger = config.logger || {
       info: (message) => console.log(`[INFO] ${message}`),
       warn: (message) => console.log(`[WARN] ${message}`),
@@ -48,6 +64,11 @@ class EmailService {
     this.logger.info("EmailService initializing...");
   }
 
+  /**
+   * Method to send an email.
+   * @param {object} email - {id, to, subject, body} - 'id' needs to be unique
+   * @returns {Promise<object>} Status of email sending attempt
+   */
   async sendEmail(email) {
     if (!email || !email.id || !email.to || !email.subject) {
       this.logger.error("Invalid `email` object provided.");
@@ -84,6 +105,10 @@ class EmailService {
     return this._attemptSendWithRetries(email, 0, this.currentProviderIndex);
   }
 
+  /**
+   * Private method to attempt sending email with retries and circuit breaking.
+   * @private
+   */
   async _attemptSendWithRetries(email, attempt = 0, providerIndex = 0) {
     if (attempt >= this.maxRetries) {
       this.logger.error(
@@ -194,6 +219,10 @@ class EmailService {
     }
   }
 
+  /**
+   * Private method to handle provider failure and enable circuit breaking.
+   * @private
+   */
   _handleProviderFailure(providerName) {
     const cb = this.circuitBreaker[providerName];
     if (!cb) return;
@@ -213,6 +242,10 @@ class EmailService {
     }
   }
 
+  /**
+   * Private method to check if the circuit is OPEN for a given provider.
+   * @private
+   */
   _isCircuitOpen(providerName) {
     const cb = this.circuitBreaker[providerName];
     if (!cb || !cb.isOpen) {
@@ -230,6 +263,9 @@ class EmailService {
     return true;
   }
 
+  /**
+   * Internal method to reset circuit after the `this.circuitBreaker.resetTimeoutMs` has passed.
+   */
   _resetCircuit(providerName) {
     const cb = this.circuitBreaker[providerName];
     if (cb.isOpen) {
@@ -244,6 +280,9 @@ class EmailService {
     this.requestTimestamps.push(Date.now());
   }
 
+  /**
+   * Enqueues an email and optionally enables queue processing.
+   */
   enqueueEmail(email) {
     this.logger.info(`Email ${email.id} added to the queue`);
     this.emailQueue.push(email);
@@ -251,6 +290,9 @@ class EmailService {
     this.processQueue(); // Process queued emails
   }
 
+  /**
+   * Async method to enable email queue processing externally (as needed).
+   */
   async processQueue() {
     if (this.isProcessingQueue || this.emailQueue.length === 0) {
       return;
@@ -278,6 +320,9 @@ class EmailService {
     this.logger.info("Queue processing finished.");
   }
 
+  /**
+   * Checks if rate limit is not exhausted.
+   */
   isAllowedByRateLimiter() {
     const now = Date.now();
     this.requestTimestamps = this.requestTimestamps.filter(
@@ -289,6 +334,12 @@ class EmailService {
     return false;
   }
 
+  /**
+   * Updates the status of email with email ID `emailId`.
+   * @param {emailId} emailId
+   * @param {status} status
+   * @param {details} details defaults `{}`
+   */
   updateEmailStatus(emailId, status, details = {}) {
     const existingStatus = this.emailStatuses.get(emailId) || {
       id: emailId,
@@ -312,6 +363,9 @@ class EmailService {
     );
   }
 
+  /**
+   * Fetches the status of an email with email ID `emailId`
+   */
   getEmailStatus(emailId) {
     return (
       this.emailStatuses.get(emailId) || {
