@@ -3,6 +3,11 @@ class MockProviderB {
     this.name = name;
   }
 
+  /**
+   * Mocks sending an email.
+   * @param {object} email - The email to be sent (contains e.g. {to, subject, body}).
+   * @returns {Promise<object>} A promise that resolves to success with a message or failure with an error.
+   */
   async send(email) {
     console.log(
       `[${this.name}] Attempting to send email to ${email.to} with subject "${email.subject}"`,
