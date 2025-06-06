@@ -1,7 +1,7 @@
-import MockProviderA from "./MockProviderA";
-import MockProviderB from "./MockProviderB";
-import EmailStatus from "./EmailStatus";
-import delay from "./utils/delay";
+import MockProviderA from "./MockProviderA.js";
+import MockProviderB from "./MockProviderB.js";
+import EmailStatus from "./EmailStatus.js";
+import delay from "./utils/delay.js";
 
 class EmailService {
   constructor(config = {}) {
@@ -320,6 +320,9 @@ class EmailService {
         message: "Not yet precessed.",
       }
     );
+  }
+  getAllEmailStatuses() {
+    return Array.from(this.emailStatuses.values());
   }
 }
 
