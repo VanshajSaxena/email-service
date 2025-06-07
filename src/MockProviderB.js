@@ -15,7 +15,7 @@ class MockProviderB {
 
     // Simulating network delay
     await new Promise((resolve) =>
-      setTimeout(resolve, Math.random() * 1000 + 500),
+      setTimeout(resolve, Math.random() * 1000 + 300),
     );
 
     // Simulating occasional failures
