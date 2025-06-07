@@ -177,4 +177,4 @@ Returns the latest status object for a given email ID.
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the [MIT License](LICENSE).
